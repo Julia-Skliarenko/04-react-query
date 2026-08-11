@@ -3,12 +3,15 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import ReactPaginateModule from 'react-paginate';
 import toast, { Toaster } from 'react-hot-toast';
 import { fetchMovies } from '../../services/moviesApi';
+import SearchBar from '../SearchBar/SearchBar';
+import MovieGrid from '../MovieGrid/MovieGrid';
+import Loader from '../Loader/Loader';
+import ErrorMessage from '../ErrorMessage/ErrorMessage';
 import css from './App.module.css';
 
 const ReactPaginate = (ReactPaginateModule as unknown as { default: typeof ReactPaginateModule }).default || ReactPaginateModule;
 
 export default function App() {
-  const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -35,12 +38,7 @@ export default function App() {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!query.trim()) {
-      toast.error('Please enter a search query!');
-      return;
-    }
+  const handleSearchSubmit = (query: string) => {
     setSearchQuery(query);
     setPage(1);
   };
@@ -48,18 +46,7 @@ export default function App() {
   return (
     <div>
       <Toaster position="top-center" />
-      <header className={css.header}>
-        <span className={css.logo}>Powered by TMDB</span>
-        <form className={css.form} onSubmit={handleSearchSubmit}>
-          <input 
-            className={css.input} 
-            value={query} 
-            onChange={(e) => setQuery(e.target.value)} 
-            placeholder="Search movies..."
-          />
-          <button className={css.button} type="submit">Search</button>
-        </form>
-      </header>
+      <SearchBar onSubmit={handleSearchSubmit} />
 
       <div className={css.container}>
         {searchQuery && totalPages > 1 && (
@@ -77,27 +64,10 @@ export default function App() {
           />
         )}
 
-        {isLoading && <p>Loading...</p>}
-        {isError && <p>Error occurred</p>}
+        {isLoading && <Loader />}
+        {isError && <ErrorMessage />}
 
-        <ul className={css.list}>
-          {data?.results.map((movie) => (
-            <li className={css.item} key={movie.id}>
-              <div className={css.imageWrapper}>
-                {movie.poster_path ? (
-                  <img 
-                    src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} 
-                    alt={movie.title} 
-                    className={css.image}
-                  />
-                ) : (
-                  <div className={css.noImage}>No Image</div>
-                )}
-              </div>
-              <p className={css.movieTitle}>{movie.title}</p>
-            </li>
-          ))}
-        </ul>
+        {data?.results && <MovieGrid movies={data.results} />}
       </div>
     </div>
   );
