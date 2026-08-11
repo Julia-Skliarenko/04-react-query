@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { MoviesResponse } from '../../types/movie';
+import type { MoviesResponse } from '../types/movie';
 
 const API_KEY = '955dad1e7382dc291ad52a01b8e57e8f';
 
