@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import ReactPaginateModule from 'react-paginate';
 import toast, { Toaster } from 'react-hot-toast';
-import { fetchMovies } from '../../services/moviesApi';
+import { fetchMovies } from '../../services/movieService';
 import SearchBar from '../SearchBar/SearchBar';
 import MovieGrid from '../MovieGrid/MovieGrid';
 import Loader from '../Loader/Loader';
