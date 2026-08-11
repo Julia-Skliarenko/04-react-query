@@ -1,25 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import axios from 'axios';
 import ReactPaginateModule from 'react-paginate';
 import toast, { Toaster } from 'react-hot-toast';
-import type { MoviesResponse } from '../../types/movie';
+import { fetchMovies } from '../../services/moviesApi';
 import css from './App.module.css';
 
 const ReactPaginate = (ReactPaginateModule as unknown as { default: typeof ReactPaginateModule }).default || ReactPaginateModule;
-
-const API_KEY = '955dad1e7382dc291ad52a01b8e57e8f';
-
-const fetchMovies = async (searchQuery: string, page: number): Promise<MoviesResponse | null> => {
-  if (!searchQuery) {
-    return null;
-  }
-  
-  const url = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${searchQuery}&page=${page}`;
-  
-  const response = await axios.get<MoviesResponse>(url);
-  return response.data;
-};
 
 export default function App() {
   const [query, setQuery] = useState('');
