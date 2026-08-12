@@ -1,74 +1,153 @@
 import { useState, useEffect } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import ReactPaginateModule from 'react-paginate';
 import toast, { Toaster } from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
+import { SearchBar } from '../SearchBar/SearchBar';
+import { MovieGrid } from '../MovieGrid/MovieGrid';
+import { Loader } from '../Loader/Loader';
+import { ErrorMessage } from '../ErrorMessage/ErrorMessage';
+import { MovieModal } from '../MovieModal/MovieModal';
 import { fetchMovies } from '../../services/movieService';
-import SearchBar from '../SearchBar/SearchBar';
-import MovieGrid from '../MovieGrid/MovieGrid';
-import Loader from '../Loader/Loader';
-import ErrorMessage from '../ErrorMessage/ErrorMessage';
-import css from './App.module.css';
+import type { Movie } from '../../types/movie';
 
-const ReactPaginate = (ReactPaginateModule as unknown as { default: typeof ReactPaginateModule }).default || ReactPaginateModule;
+// --- Компонент Пагинации (свой, надежный) ---
+interface PaginationProps {
+  current: number;
+  total: number;
+  onChange: (page: number) => void;
+}
 
-export default function App() {
-  const [page, setPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
+function Pagination({ current, total, onChange }: PaginationProps) {
+  if (total <= 1) return null;
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) pages.push(i);
+    } else {
+      if (current <= 4) {
+        pages.push(1, 2, 3, 4, 5, '...', total);
+      } else if (current >= total - 3) {
+        pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+      } else {
+        pages.push(1, '...', current - 1, current, current + 1, '...', total);
+      }
+    }
+    return pages;
+  };
+
+  const buttonStyle = {
+    padding: '6px 12px',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    backgroundColor: 'white',
+    margin: '0 2px',
+    minWidth: '36px',
+    display: 'inline-flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  };
+
+  const activeStyle = { ...buttonStyle, backgroundColor: '#0066cc', color: 'white', borderColor: '#0066cc' };
+  const disabledStyle = { ...buttonStyle, opacity: 0.5, cursor: 'not-allowed' };
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px 0', margin: '10px 0' }}>
+      <button
+        onClick={() => onChange(current - 1)}
+        disabled={current === 1}
+        style={current === 1 ? disabledStyle : buttonStyle}
+      >
+        ←
+      </button>
+
+      {getPageNumbers().map((p, index) => (
+        typeof p === 'number' ? (
+          <button
+            key={index}
+            onClick={() => onChange(p)}
+            style={current === p ? activeStyle : buttonStyle}
+          >
+            {p}
+          </button>
+        ) : (
+          <span key={index} style={{ margin: '0 4px' }}>{p}</span>
+        )
+      ))}
+
+      <button
+        onClick={() => onChange(current + 1)}
+        disabled={current === total}
+        style={current === total ? disabledStyle : buttonStyle}
+      >
+        →
+      </button>
+    </div>
+  );
+}
+// --- Конец компонента ---
+
+
+export function App() {
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['movies', searchQuery, page],
     queryFn: () => fetchMovies(searchQuery, page),
-    enabled: Boolean(searchQuery),
-    placeholderData: keepPreviousData,
+    enabled: !!searchQuery,
   });
 
-  const totalPages = data?.total_pages || 0;
+  const movies = data?.results || [];
 
   useEffect(() => {
-    if (data && data.results.length === 0 && searchQuery) {
+    if (searchQuery && data && movies.length === 0 && !isLoading) {
       toast.error('No movies found for your request.');
     }
-  }, [data, searchQuery]);
+  }, [data, movies.length, searchQuery, isLoading]);
 
-  const handlePageChange = (selectedItem: { selected: number }) => {
-    const newPage = selectedItem.selected + 1;
-    if (newPage !== page) {
-      setPage(newPage);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  const handleSearchSubmit = (query: string) => {
+  const handleSearch = (query: string) => {
     setSearchQuery(query);
     setPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo(0, 0); // Прокрутка вверх при смене страницы, как на TMDB
   };
 
   return (
     <div>
       <Toaster position="top-center" />
-      <SearchBar onSubmit={handleSearchSubmit} />
+      <SearchBar onSubmit={handleSearch} />
 
-      <div className={css.container}>
-        {searchQuery && totalPages > 1 && (
-          <ReactPaginate
-            pageCount={totalPages}
-            pageRangeDisplayed={3}
-            marginPagesDisplayed={1}
-            onPageChange={handlePageChange}
-            forcePage={page - 1}
-            containerClassName={css.pagination}
-            activeClassName={css.active}
-            nextLabel="→"
-            previousLabel="←"
-            breakLabel="..."
-          />
-        )}
+      {/* --- ПАГИНАЦИЯ ТЕПЕРЬ ЗДЕСЬ (ВВЕРХУ) --- */}
+      {data && data.total_pages > 1 && (
+        <Pagination
+          current={page}
+          total={data.total_pages}
+          onChange={handlePageChange}
+        />
+      )}
 
-        {isLoading && <Loader />}
+      <main style={{ padding: '20px 0' }}>
         {isError && <ErrorMessage />}
+        {isLoading && <Loader />}
 
-        {data?.results && <MovieGrid movies={data.results} />}
-      </div>
+        {!isLoading && !isError && movies.length > 0 && (
+          <MovieGrid movies={movies} onSelect={setSelectedMovie} />
+        )}
+      </main>
+
+      {selectedMovie && (
+        <MovieModal
+          movie={selectedMovie}
+          onClose={() => setSelectedMovie(null)}
+        />
+      )}
     </div>
   );
 }
+
+export default App;
