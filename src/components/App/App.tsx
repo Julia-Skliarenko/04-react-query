@@ -9,7 +9,6 @@ import { MovieModal } from '../MovieModal/MovieModal';
 import { fetchMovies } from '../../services/movieService';
 import type { Movie } from '../../types/movie';
 
-// --- Компонент Пагинации (свой, надежный) ---
 interface PaginationProps {
   current: number;
   total: number;
@@ -85,27 +84,26 @@ function Pagination({ current, total, onChange }: PaginationProps) {
     </div>
   );
 }
-// --- Конец компонента ---
-
 
 export function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [page, setPage] = useState<number>(1);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, isSuccess } = useQuery({
     queryKey: ['movies', searchQuery, page],
     queryFn: () => fetchMovies(searchQuery, page),
     enabled: !!searchQuery,
+    placeholderData: (prev) => prev,
   });
 
   const movies = data?.results || [];
 
   useEffect(() => {
-    if (searchQuery && data && movies.length === 0 && !isLoading) {
+    if (isSuccess && searchQuery && movies.length === 0) {
       toast.error('No movies found for your request.');
     }
-  }, [data, movies.length, searchQuery, isLoading]);
+  }, [isSuccess, movies.length, searchQuery]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -114,7 +112,7 @@ export function App() {
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
-    window.scrollTo(0, 0); // Прокрутка вверх при смене страницы, как на TMDB
+    window.scrollTo(0, 0);
   };
 
   return (
@@ -122,7 +120,6 @@ export function App() {
       <Toaster position="top-center" />
       <SearchBar onSubmit={handleSearch} />
 
-      {/* --- ПАГИНАЦИЯ ТЕПЕРЬ ЗДЕСЬ (ВВЕРХУ) --- */}
       {data && data.total_pages > 1 && (
         <Pagination
           current={page}

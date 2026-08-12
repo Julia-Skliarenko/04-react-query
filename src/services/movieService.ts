@@ -4,13 +4,25 @@ import type { Movie } from '../types/movie';
 export interface MoviesResponse {
   results: Movie[];
   total_pages: number;
+  total_results: number;
+  page: number;
 }
 
-const API_KEY = '955dad1e7382dc291ad52a01b8e57e8f';
+const TMDB_TOKEN = import.meta.env.VITE_TMDB_TOKEN;
 
-export const fetchMovies = async (searchQuery: string, page: number): Promise<MoviesResponse | null> => {
-  if (!searchQuery) return null;
-  const url = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${searchQuery}&page=${page}`;
-  const response = await axios.get<MoviesResponse>(url);
+const apiClient = axios.create({
+  baseURL: 'https://api.themoviedb.org/3',
+  headers: {
+    Authorization: `Bearer ${TMDB_TOKEN}`,
+  },
+});
+
+export const fetchMovies = async (searchQuery: string, page: number): Promise<MoviesResponse> => {
+  const response = await apiClient.get<MoviesResponse>('/search/movie', {
+    params: {
+      query: searchQuery,
+      page,
+    },
+  });
   return response.data;
 };
